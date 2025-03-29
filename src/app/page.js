@@ -10,15 +10,15 @@ function generateDigits(count) {
 }
 
 export default function Home() {
-  // Initially, tokens are simply the six digits as strings.
+  // State
   const [digits] = useState(generateDigits(6));
   const [tokens, setTokens] = useState(digits.map(String));
-  const [pendingOp, setPendingOp] = useState(null); // operator/bracket waiting to be inserted
+  const [pendingOp, setPendingOp] = useState(null);
   const [result, setResult] = useState(null);
   const [won, setWon] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
-  // Helper: Check if there is at least one unmatched '(' in the current tokens.
+  // Check for unmatched '('
   const hasUnmatchedLeft = () => {
     let count = 0;
     tokens.forEach(token => {
@@ -28,41 +28,30 @@ export default function Home() {
     return count > 0;
   };
 
-  // isGapValid: Checks if inserting op at gap index i (between tokens) is valid.
+  // Validate gap insertion
   const isGapValid = (i, op) => {
     const left = i - 1 >= 0 ? tokens[i - 1] : null;
     const right = i < tokens.length ? tokens[i] : null;
     
     if (['+', '-', '*', '/', '^'].includes(op)) {
-      // For binary operators, require a left token that ends with a digit or ')' and a right token that starts with a digit or '('.
       if (!left || !right) return false;
-      if ((/^\d+$/.test(left) || left === ')') && (/^\d+$/.test(right) || right === '(')) {
-        return true;
-      }
+      if ((/^\d+$/.test(left) || left === ')') && (/^\d+$/.test(right) || right === '(')) return true;
       return false;
     } else if (op === '(') {
-      // Allow '(' at beginning or after an operator or after another '('.
-      // Also, it is valid if the right token exists and is a digit or another '('.
       if (i === 0 || ['+', '-', '*', '/', '^', '('].includes(left)) {
-        if (!right || (/^\d+$/.test(right) || right === '(')) {
-          return true;
-        }
+        if (!right || (/^\d+$/.test(right) || right === '(')) return true;
       }
       return false;
     } else if (op === ')') {
-      // Allow ')' only if there is an unmatched '('.
-      // Also, the left token must be a digit or a ')' and either at the end or followed by an operator.
       if (!left || (!(/^\d+$/.test(left) || left === ')'))) return false;
       if (!hasUnmatchedLeft()) return false;
-      if (!right || ['+', '-', '*', '/', '^', ')'].includes(right)) {
-        return true;
-      }
+      if (!right || ['+', '-', '*', '/', '^', ')'].includes(right)) return true;
       return false;
     }
     return false;
   };
 
-  // Insert the pending operator at gap index i.
+  // Insert operator
   const insertAtGap = (i) => {
     if (!pendingOp) return;
     const newTokens = [...tokens];
@@ -72,16 +61,15 @@ export default function Home() {
     setResult(null);
   };
 
-  // Called when an operator button is clicked.
+  // Handle operator button click
   const handleOperatorClick = (op) => {
     setPendingOp(op);
   };
 
-  // Evaluate the expression formed by joining all tokens.
+  // Evaluate expression
   const evaluateExpression = () => {
     const expr = tokens.join('');
     try {
-      // Using eval() for simplicity (be cautious using eval() in production).
       const evalResult = eval(expr);
       setResult(evalResult);
       if (evalResult === 100) {
@@ -96,7 +84,7 @@ export default function Home() {
     }
   };
 
-  // Reset the game.
+  // Reset game
   const resetGame = () => {
     setTokens(digits.map(String));
     setPendingOp(null);
@@ -105,7 +93,7 @@ export default function Home() {
     setShowModal(false);
   };
 
-  // Play winning sound when the game is won.
+  // Play sound on win
   useEffect(() => {
     if (showModal) {
       const audio = new Audio('/win-sound.mp3');
@@ -114,90 +102,167 @@ export default function Home() {
   }, [showModal]);
 
   return (
-    <div className="container d-flex flex-column align-items-center justify-content-center min-vh-100 bg-light position-relative">
-      {showModal && (
-        <>
-          <Confetti width={window.innerWidth} height={window.innerHeight} recycle={false} numberOfPieces={500} />
-          <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-dark bg-opacity-75">
-            <div className="bg-white p-5 rounded text-center shadow-lg animate__animated animate__bounceInDown">
-              <h2 className="display-3 text-success animate__animated animate__heartBeat animate__infinite">
-                Winner!
-              </h2>
-              <p className="fs-3 my-4">Congratulations! You made 100 using the digits in order!</p>
-              <button onClick={resetGame} className="btn btn-success btn-lg">
-                Play Again
-              </button>
-            </div>
-          </div>
-        </>
-      )}
-
-      <h1 className="display-4 text-primary mb-3 animate__animated animate__fadeInDown">
-        HectoClash - The Ultimate Mental Math Duel
-      </h1>
-      <div className="mb-4 p-3 border rounded shadow bg-white animate__animated animate__fadeInUp">
-        <p className="fs-5 text-center mb-0">
-          In this game, you are given a sequence of six digits (each from 1 to 9) which <strong>must be used in the given order</strong>.
-          <br />
-          Insert mathematical operations (addition, subtraction, multiplication, division, exponentiation, and parentheses)
-          in the gaps to form an expression equal to 100.
-          <br />
-          <em>For example: 1 + (2+3+4)×(5+6) = 100</em>
-        </p>
-      </div>
-      
-      {/* Display the expression with clickable gaps */}
-      <div className="d-flex align-items-center mb-4">
-        {Array.from({ length: tokens.length + 1 }).map((_, i) => (
-          <React.Fragment key={i}>
-            <span 
-              onClick={() => {
-                if (pendingOp && isGapValid(i, pendingOp)) {
-                  insertAtGap(i);
-                }
-              }}
-              className={`mx-1 p-2 border rounded ${pendingOp && isGapValid(i, pendingOp)
-                ? "bg-info text-white animate__animated animate__flash animate__infinite"
-                : "bg-light"}`}
-              style={{ cursor: pendingOp && isGapValid(i, pendingOp) ? "pointer" : "default", minWidth: "30px", textAlign: "center" }}
-            >
-              {pendingOp && isGapValid(i, pendingOp) ? pendingOp : ""}
-            </span>
-            {i < tokens.length && (
-              <span className="p-3 bg-white border rounded shadow text-dark display-5">
-                {tokens[i]}
-              </span>
-            )}
-          </React.Fragment>
-        ))}
-      </div>
-
-      {/* Operator Buttons */}
-      <div className="d-flex flex-wrap justify-content-center gap-2 mb-3">
-        <button className="btn btn-outline-primary" onClick={() => handleOperatorClick('+')}>+</button>
-        <button className="btn btn-outline-primary" onClick={() => handleOperatorClick('-')}>-</button>
-        <button className="btn btn-outline-primary" onClick={() => handleOperatorClick('*')}>*</button>
-        <button className="btn btn-outline-primary" onClick={() => handleOperatorClick('/')}>/</button>
-        <button className="btn btn-outline-primary" onClick={() => handleOperatorClick('^')}>^</button>
-        <button className="btn btn-outline-primary" onClick={() => handleOperatorClick('(')}>(</button>
-        <button className="btn btn-outline-primary" onClick={() => handleOperatorClick(')')}>)</button>
-      </div>
-
-      {/* Evaluation and Control Buttons */}
-      <div className="d-flex gap-2 mb-3">
-        <button onClick={evaluateExpression} className="btn btn-primary btn-lg shadow animate__animated animate__pulse">
-          Evaluate
-        </button>
-        <button onClick={resetGame} className="btn btn-warning btn-lg shadow">
-          Clear
-        </button>
-      </div>
-      
-      {result !== null && !won && (
-        <div className="mt-4 alert alert-info fs-4 animate__animated animate__fadeInUp">
-          {result === 'Invalid Expression' ? result : `Result: ${result}. Keep trying!`}
+    <div 
+      className="min-vh-100 d-flex flex-column"
+      style={{
+        background: 'linear-gradient(135deg, #f5f7fa, #c3cfe2)', 
+        color: '#333'
+      }}
+    >
+      {/* Navbar */}
+      <nav className="navbar navbar-expand-lg shadow-sm" style={{ backgroundColor: '#34495e' }}>
+        <div className="container">
+          <span className="navbar-brand fw-bold fs-3 text-white">HectoClash</span>
+          <span className="navbar-text fs-5 text-light">The Ultimate Mental Math Duel</span>
         </div>
-      )}
+      </nav>
+
+      {/* Main Container */}
+      <div className="container py-5 flex-grow-1 position-relative">
+        {/* Celebration Modal */}
+        {showModal && (
+          <>
+            <Confetti
+              width={window.innerWidth}
+              height={window.innerHeight}
+              recycle={false}
+              numberOfPieces={600}
+            />
+            <div
+              className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center"
+              style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+            >
+              <div
+                className="p-5 rounded shadow-lg animate__animated animate__bounceInDown text-center"
+                style={{
+                  backgroundColor: '#fff',
+                  color: '#333',
+                  maxWidth: '600px',
+                  width: '90%',
+                }}
+              >
+                <h2 className="display-3 fw-bold animate__animated animate__heartBeat animate__infinite mb-4">
+                  Winner!
+                </h2>
+                <p className="fs-3 mb-4">
+                  Congratulations! You made 100 using the digits in order!
+                </p>
+                <button onClick={resetGame} className="btn btn-success btn-lg">
+                  Play Again
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Instructions Card */}
+        <div
+          className="card mx-auto mb-4 shadow animate__animated animate__fadeInUp"
+          style={{
+            maxWidth: '600px',
+            backgroundColor: '#fff',
+            border: 'none',
+            color: '#333'
+          }}
+        >
+          <div className="card-body text-center">
+            <h4 className="card-title fw-bold mb-3">How to Play</h4>
+            <p className="card-text mb-2">
+              You are given a sequence of six digits (each from 1 to 9) that must be used in order.
+              Insert mathematical operations—addition, subtraction, multiplication, division, exponentiation,
+              and parentheses—into the gaps between the digits to form an expression equal to 100.
+            </p>
+            <p className="fst-italic mb-0">
+              Example: 1 + (2+3+4)×(5+6) = 100
+            </p>
+          </div>
+        </div>
+
+        {/* Expression Display */}
+        <div className="mb-4 d-flex flex-wrap justify-content-center align-items-center animate__animated animate__fadeIn">
+          {Array.from({ length: tokens.length + 1 }).map((_, i) => (
+            <React.Fragment key={i}>
+              <span
+                onClick={() => {
+                  if (pendingOp && isGapValid(i, pendingOp)) {
+                    insertAtGap(i);
+                  }
+                }}
+                className={`mx-1 p-2 border rounded ${
+                  pendingOp && isGapValid(i, pendingOp)
+                    ? 'bg-warning text-dark animate__animated animate__flash animate__infinite'
+                    : 'bg-white text-dark'
+                }`}
+                style={{
+                  cursor: pendingOp && isGapValid(i, pendingOp) ? 'pointer' : 'default',
+                  minWidth: '50px',
+                  textAlign: 'center',
+                  fontSize: '1.6rem',
+                  transition: 'all 0.3s ease',
+                }}
+              >
+                {pendingOp && isGapValid(i, pendingOp) ? pendingOp : ''}
+              </span>
+              {i < tokens.length && (
+                <span
+                  className="p-3 border rounded shadow mx-1"
+                  style={{
+                    backgroundColor: '#fff',
+                    color: '#333',
+                    fontSize: '2rem',
+                    minWidth: '50px',
+                    textAlign: 'center',
+                  }}
+                >
+                  {tokens[i]}
+                </span>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+
+        {/* Operator Buttons */}
+        <div className="d-flex flex-wrap justify-content-center gap-3 mb-4">
+          {['+', '-', '*', '/', '^', '(', ')'].map((op) => (
+            <button
+              key={op}
+              className="btn btn-outline-dark btn-lg shadow"
+              style={{ minWidth: '60px' }}
+              onClick={() => handleOperatorClick(op)}
+            >
+              {op}
+            </button>
+          ))}
+        </div>
+
+        {/* Evaluation and Control Buttons */}
+        <div className="d-flex flex-wrap justify-content-center gap-4 mb-4">
+          <button
+            onClick={evaluateExpression}
+            className="btn btn-success btn-lg shadow animate__animated animate__pulse"
+          >
+            Evaluate
+          </button>
+          <button
+            onClick={resetGame}
+            className="btn btn-danger btn-lg shadow"
+          >
+            Clear
+          </button>
+        </div>
+
+        {/* Result Alert */}
+        {result !== null && !won && (
+          <div
+            className="alert alert-secondary fs-4 text-center mx-auto animate__animated animate__fadeInUp"
+            style={{ maxWidth: '600px' }}
+          >
+            {result === 'Invalid Expression'
+              ? result
+              : `Result: ${result}. Keep trying!`}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
