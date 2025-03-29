@@ -156,7 +156,9 @@ export default function Home() {
                   insertAtGap(i);
                 }
               }}
-              className={`mx-1 p-2 border rounded ${pendingOp && isGapValid(i, pendingOp) ? "bg-info text-white animate__animated animate__pulse" : "bg-light"}`}
+              className={`mx-1 p-2 border rounded ${pendingOp && isGapValid(i, pendingOp)
+                ? "bg-info text-white animate__animated animate__flash animate__infinite"
+                : "bg-light"}`}
               style={{ cursor: pendingOp && isGapValid(i, pendingOp) ? "pointer" : "default", minWidth: "30px", textAlign: "center" }}
             >
               {pendingOp && isGapValid(i, pendingOp) ? pendingOp : ""}
